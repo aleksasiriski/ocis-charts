@@ -26,22 +26,22 @@ releases:
   - name: rabbitmq
     namespace: onlyoffice
     chart: bitnami/rabbitmq
-    version: 12.5.4
+    version: 14.3.1
 
   - name: redis
     namespace: onlyoffice
     chart: bitnami/redis
-    version: 18.4.0
+    version: 19.5.0
 
   - name: postgresql
     namespace: onlyoffice
     chart: bitnami/postgresql
-    version: 13.2.21
+    version: 15.4.2
 
   - name: onlyoffice
     namespace: onlyoffice
     chart: onlyoffice/docs
-    version: 3.5.0
+    version: 4.1.0
     needs:
       - onlyoffice/addons-onlyoffice
       - onlyoffice/rabbitmq
@@ -78,7 +78,7 @@ releases:
   - name: collabora
     namespace: collabora
     chart: collabora/collabora-online
-    version: 1.1.5
+    version: 1.1.16
     values:
       - collabora:
           aliasgroups:
@@ -107,6 +107,9 @@ releases:
     chart: cs3org/wopiserver
     version: 0.9.2
     values:
+      - image:
+          # renovate: datasource=docker depName=cs3org/wopiserver
+          tag: v10.4.0
       - wopiserverUrl: http://wopiserver.wopiserver.svc.cluster.local:8880
       - config:
           cs3:

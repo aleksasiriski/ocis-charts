@@ -73,7 +73,7 @@ deploymentStrategy:
   type: RollingUpdate
 
 # -- Domain where oCIS is reachable for the outside world
-externalDomain: ocis.owncloud.test
+externalDomain: ""
 
 # Insecure options.
 # These are useful for some limited environments like CI or on a test cluster.
@@ -203,6 +203,8 @@ features:
         # -- Minimum number of characters to enter before a client should start a search for Share receivers.
         # This setting can be used to customize the user experience if e.g too many results are displayed.
         minLengthLimit: 3
+        # -- Show user email when searching for other users to share with.
+        showUserEmail: true
     # Sharing per public link related setings
     publiclink:
       # -- Enforce a password on all public link shares.
@@ -237,7 +239,7 @@ features:
     # WOPI (office suite integration) needs an https://github.com/cs3org/wopiserver[cs3org/wopiserver] and at least one office suite.
     wopiIntegration:
       # -- URL of the https://github.com/cs3org/wopiserver[cs3org/wopiserver]. Can be deployed https://artifacthub.io/packages/helm/cs3org/wopiserver[with this Chart].
-      wopiServerURI: https://wopiserver.owncloud.test
+      wopiServerURI: ""
       # -- Base url to navigate back from the app to the containing folder in the file list.
       wopiFolderURI: https://{{ .Values.externalDomain }}
       # -- Path template for the url to navigate back from the app to the containing folder in the file list.
@@ -250,9 +252,9 @@ features:
           # -- Enables the office suite.
           enabled: false
           # -- URI of the office suite.
-          uri: https://collabora.owncloud.test
+          uri: ""
           # -- URI for the icon of the office suite. Will be displayed to the users.
-          iconURI: https://collabora.owncloud.test/favicon.ico
+          iconURI: ""
           # -- Disables SSL certificate checking for connections to the office suites http api.
           # Not recommended for production installations.
           insecure: false
@@ -261,9 +263,9 @@ features:
           # -- Enables the office suite.
           enabled: false
           # -- URI of the office suite.
-          uri: https://onlyoffice.owncloud.test
+          uri: ""
           # -- URI for the icon of the office suite. Will be displayed to the users.
-          iconURI: https://onlyoffice.owncloud.test/web-apps/apps/documenteditor/main/resources/img/favicon.ico
+          iconURI: ""
           # -- Disables SSL certificate checking for connections to the office suites http api.
           # Not recommended for production installations.
           insecure: false
@@ -291,11 +293,15 @@ features:
     # Consider that the UUID can be encoded in some LDAP deployment configurations like in .ldif files. These need to be decoded beforehand.
     # Note: Enabling `roleAssignment` will disable `adminUUID`.
     adminUUID: ""
+    # -- Enables account auto provisioning.
+    # It will create missing users on the LDAP server from OIDC information.
+    # Needs `features.externalUserManagement.ldap.writeable` to be be set to `true`.
+    autoprovisionAccounts: false
     # OpenID Connect Identity provider related settings.
     oidc:
       # -- Issuer URI of the OpenID Connect Identity Provider.
       # If the IDP doesn't have valid / trusted SSL certificates, certificate validation can be disabled with the `insecure.oidcIdpInsecure` option.
-      issuerURI: https://idp.owncloud.test/realms/ocis
+      issuerURI: ""
       # -- Link to the OIDC provider's user accessible session management. This will be shown to the user on the personal account page.
       # When using Keycloak with the a realm named "ocis" this could point to eg. https://keycloak.owncloud.test/realms/ocis/account/
       sessionManagementLink: ""
@@ -436,13 +442,13 @@ features:
         # -- Enable keycloak data export.
         enabled: false
         # -- Base URI of keycloak.
-        basePath: https://keycloak.owncloud.test
+        basePath: ""
         # -- Client ID to authenticate against keycloak with.
-        clientID: gdpr-exporter
+        clientID: ""
         # -- Realm that the client ID is configured in, usually master.
-        clientRealm: master
+        clientRealm: ""
         # -- Realm that the users are in.
-        userRealm: oCIS
+        userRealm: ""
         # -- Disables SSL certificate checking for connections to the GDPR export service.
         # Not recommended for production installations.
         insecure: false
@@ -1411,33 +1417,6 @@ services:
       sha: ""
       # -- Image pull policy
       pullPolicy:
-    maintenance:
-      restartPostprocessingFinished:
-        # -- Restart postprocessing for uploads where final storage move is not done.
-        enabled: false
-        # -- Cron pattern for the job to be run. Defaults to every minute.
-        schedule: "0 * * * *"
-        # -- Defines the a deadline (in whole seconds) for starting the Job, if that Job misses its scheduled time for any reason.
-        startingDeadlineSeconds: 600
-      restartPostprocessingVirusscan:
-        # -- Restart postprocessing for uploads hwich are currenlty in the virusscan step.
-        # Only applicable when `.Values.features.virusscan.enabled` is set to `true`.
-        enabled: false
-        # -- Cron pattern for the job to be run. Defaults to every minute.
-        schedule: "0 * * * *"
-        # -- Defines the a deadline (in whole seconds) for starting the Job, if that Job misses its scheduled time for any reason.
-        startingDeadlineSeconds: 600
-      # Image for the storageusers service maintenance jobs
-      # Defaults to the same values as `image`
-      image:
-        # -- Image repository
-        repository: ""
-        # -- Image tag.
-        tag: ""
-        # -- Image sha / digest (optional).
-        sha: ""
-        # -- Image pull policy
-        pullPolicy:
 
   # -- PROXY service.
   # @default -- see detailed service configuration options below
@@ -1482,7 +1461,7 @@ services:
       sizeLimit:
       tika:
         # -- Set the URL to Tika. Only applicable if `services.search.extractor.type` == `tika`.
-        url: http://tika.tika.svc.cluster.local:9998
+        url: ""
         # -- Defines if stop words should be cleaned or not.
         cleanStopWords: true
     # -- Persistence settings.
@@ -1744,6 +1723,11 @@ services:
   # -- STORAGE-USERS service.
   # @default -- see detailed service configuration options below
   storageusers:
+    events:
+      consumer:
+        # -- Number of event consumers to be started that concurrently consume events (eg. postprocessing related events)
+        concurrency: 10
+
     storageBackend:
       # -- Configures the storage driver. Possible values are "ocis" and "s3ng".
       # The oCIS driver stores all data in the persistent volume if persistence is enabled.
@@ -1790,11 +1774,11 @@ services:
           #     ]
           # }
           # -- S3 endpoint to use for the S3NG driver. Only used if driver is set to "s3ng".
-          endpoint: https://localhost:1234
+          endpoint: ""
           # -- S3 region to use for the S3NG driver. Only used if driver is set to "s3ng".
           region: default
           # -- S3 bucket to use for the S3NG driver. Only used if driver is set to "s3ng".
-          bucket: example-bucket
+          bucket: ""
           # -- Disable sending content sha256 when copying objects to S3.
           disableContentSHA256: false
           putObject:
@@ -1814,7 +1798,7 @@ services:
       cleanUpExpiredUploads:
         # -- Enables a job, that cleans up expired uploads. Requires persistence to be enabled and RWX storage.
         enabled: false
-        # -- Cron pattern for the job to be run. Defaults to every minute.
+        # -- Cron pattern for the job to be run.
         schedule: "0 * * * *"
         # -- Defines the a deadline (in whole seconds) for starting the Job, if that Job misses its scheduled time for any reason.
         startingDeadlineSeconds: 600
@@ -1825,7 +1809,7 @@ services:
       purgeExpiredTrashBinItems:
         # -- Enables a job, that purges expired trash bin items. Requires persistence to be enabled.
         enabled: false
-        # -- Cron pattern for the job to be run. Defaults to every minute.
+        # -- Cron pattern for the job to be run.
         schedule: "0 * * * *"
         # -- Defines the a deadline (in whole seconds) for starting the Job, if that Job misses its scheduled time for any reason.
         startingDeadlineSeconds: 600
@@ -1833,6 +1817,14 @@ services:
         personalDeleteBefore: 30d
         # -- Setting that makes the command delete all trashed project files older than the value. The value is a number and a unit "d", "h", "m", "s".
         projectDeleteBefore: 30d
+      # Uploads that were not postprocessed can be automatically processed again by enabling the restart job.
+      restartPostprocessing:
+        # -- Enables a job, that restarts postprocessing for uploads that are currently in postprocessing state. Requires persistence to be enabled.
+        enabled: false
+        # -- Cron pattern for the job to be run.
+        schedule: "0 * * * *"
+        # -- Defines the a deadline (in whole seconds) for starting the Job, if that Job misses its scheduled time for any reason.
+        startingDeadlineSeconds: 600
       # Image for the storageusers service maintenance jobs
       # Defaults to the same values as `image`
       image:
@@ -1961,7 +1953,7 @@ services:
       cleanUpOldThumbnails:
         # -- Enables a job, that cleans up old thumbnails. Requires persistence to be enabled.
         enabled: false
-        # -- Cron pattern for the job to be run. Defaults to every minute.
+        # -- Cron pattern for the job to be run.
         schedule: "0 * * * *"
         # -- Defines the a deadline (in whole seconds) for starting the Job, if that Job misses its scheduled time for any reason.
         startingDeadlineSeconds: 600
@@ -2289,4 +2281,16 @@ monitoring:
   interval: 60s
   # -- Scrape timeout.
   scrapeTimeout: 60s
+
+# Kubernetes service related settings.
+service:
+  appProtocol:
+    # -- appProtocol to be used for service ports that use the grpc protocol.
+    grpc: grpc
+    # -- appProtocol to be used for service ports that use the http protocol.
+    http: http
+    # -- appProtocol to be used for service ports that use the ldaps protocol. Not used if `features.externalUserManagement.enabled` equals `true`.
+    ldaps: tcp
+    # -- appProtocol to be used for service ports that use the nats wire protocol. Not used if `messagingSystem.external.enabled` equals `true`.
+    nats: tcp
 
